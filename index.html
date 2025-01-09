@@ -34,9 +34,7 @@
         let wafToken = null;
         let currentRequest = 1;
         let totalRequests = 0;
-        let wafApiKey = null; // Variable pour la clé API
-
-        // Charger la clé API depuis l'API serverless
+        let wafApiKey = null;
         async function loadApiKey() {
             const response = await fetch('/api/api-key');
             const data = await response.json();
