@@ -76,7 +76,7 @@
                 if (captchaHeader) {
                     throw new Error("Captcha Required");
                 }
-                throw new Error("Forbidden");
+                throw new Error("Forbidden");   
             } else if (response.status === 405) {
                 throw new Error("HTTP Error 405");
             }
