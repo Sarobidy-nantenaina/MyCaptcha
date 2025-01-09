@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Captcha-Protected Sequence</title>
+    <script type="text/javascript" src="./config.js" defer></script>
+    <script type="text/javascript" src="https://09bd26e5e726.eu-west-3.captcha-sdk.awswaf.com/09bd26e5e726/jsapi.js" defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #result {
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Captcha-Protected Sequence</h1>
+    <form id="number-form">
+        <label for="number">Enter a number (1-1000):</label>
+        <input type="number" id="number" name="number" min="1" max="1000" required>
+        <button type="submit">Submit</button>
+    </form>
+
+    <div id="captcha-container" style="display: none;"></div>
+    <div id="result"></div>
+
+    <script type="text/javascript">
+        const apiUrl = "https://api.prod.jcloudify.com/whoami";
+        const resultContainer = document.getElementById("result");
+        const captchaContainer = document.getElementById("captcha-container");
+        let wafToken = null;
+        let currentRequest = 1;
+        let totalRequests = 0;
+
+        document.getElementById("number-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const numberInput = document.getElementById("number").value;
+            totalRequests = parseInt(numberInput, 10);
+
+            // Clear previous results
+            resultContainer.textContent = "";
+
+            // Start processing the sequence
+            processSequence();
+        });
+
+        async function processSequence() {
+            while (currentRequest <= totalRequests) {
+                try {
+                    await fetchApi();
+                    appendResult(`${currentRequest}. Forbidden`);
+                    currentRequest++;
+                } catch (error) {
+                    if (error.message === "Captcha Required") {
+                        await showCaptcha();
+                    } else if (error.message === "HTTP Error 405") {
+                        await showCaptcha();
+                    } else {
+                        appendResult(`${currentRequest}. Error: ${error.message}`);
+                        currentRequest++;
+                    }
+                }
+            }
+        }
+
+        async function fetchApi() {
+            const headers = wafToken ? { "x-aws-waf-token": wafToken } : {};
+            const response = await fetch(apiUrl, { headers });
+
+            if (response.status === 403) {
+                const captchaHeader = response.headers.get("x-aws-waf-captcha-required");
+                if (captchaHeader) {
+                    throw new Error("Captcha Required");
+                }
+                throw new Error("Forbidden");
+            } else if (response.status === 405) {
+                throw new Error("HTTP Error 405");
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP Error ${response.status}`);
+            }
+        }
+
+        async function showCaptcha() {
+            return new Promise((resolve, reject) => {
+                captchaContainer.style.display = "block";
+                AwsWafCaptcha.renderCaptcha(captchaContainer, {
+                    apiKey: window.WAF_API_KEY,
+                    onSuccess: (token) => {
+                        wafToken = token;
+                        captchaContainer.style.display = "none";
+                        resolve();
+                    },
+                    onError: (error) => {
+                        alert("Captcha failed. Please try again.");
+                        reject(error);
+                    },
+                });
+            });
+        }
+
+        function appendResult(text) {
+            resultContainer.textContent += text + "\n";
+        }
+    </script>
+</body>
+</html>
