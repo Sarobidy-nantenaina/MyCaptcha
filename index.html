@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Captcha-Protected Sequence</title>
-    <script type="text/javascript" src="./config.js" defer></script>
     <script type="text/javascript" src="https://09bd26e5e726.eu-west-3.captcha-sdk.awswaf.com/09bd26e5e726/jsapi.js" defer></script>
     <style>
         body {
@@ -35,6 +34,17 @@
         let wafToken = null;
         let currentRequest = 1;
         let totalRequests = 0;
+        let wafApiKey = null; // Variable pour la clé API
+
+        // Charger la clé API depuis l'API serverless
+        async function loadApiKey() {
+            const response = await fetch('/api/api-key');
+            const data = await response.json();
+            wafApiKey = data.apiKey;
+        }
+
+        // Appeler la fonction pour charger la clé API au début
+        loadApiKey();
 
         document.getElementById("number-form").addEventListener("submit", async (event) => {
             event.preventDefault();
@@ -90,7 +100,7 @@
             return new Promise((resolve, reject) => {
                 captchaContainer.style.display = "block";
                 AwsWafCaptcha.renderCaptcha(captchaContainer, {
-                    apiKey: window.WAF_API_KEY,
+                    apiKey: wafApiKey, 
                     onSuccess: (token) => {
                         wafToken = token;
                         captchaContainer.style.display = "none";
